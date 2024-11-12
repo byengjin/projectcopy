@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/basic.html}">
+
+<head>
+    <meta charset="UTF-8">
+    <title>게시글 상세보기</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+<div layout:fragment="content" class="container mt-5">
+    <!-- 썸네일 이미지와 상단 버튼 영역 -->
+    <div class="text-center">
+        <img th:src="${post.getThumbnail()}" class="img-fluid mb-3" alt="썸네일 이미지" style="max-width: 300px; height: auto;">
+        <div class="mt-3">
+            <!-- 버튼들 -->
+            <a th:href="@{/posting/apply/{postId}(postId=${post.postId})}" class="btn btn-primary me-2">신청하기</a>
+            <!-- 관리자에게는 신고 건수를 표시, 일반 유저에게는 신고하기 버튼 표시 -->
+            <button class="btn btn-outline-danger me-2"
+                    th:if="${isAdmin}"
+                    th:text="'신고 건수: ' + ${reportCount} + '건'">
+            </button>
+            <button class="btn btn-outline-danger me-2"
+                    th:if="${!isAdmin}"
+                    data-bs-toggle="modal"
+                    data-bs-target="#reportModal">
+                신고하기
+            </button>
+            <a th:href="@{/posting/modify/{postId}(postId=${post.postId})}" class="btn btn-secondary me-2">수정하기</a>
+            <a th:href="@{/posting/list}" class="btn btn-dark">목록으로 돌아가기</a>
+        </div>
+    </div>
+
+    <!-- 이미지 및 글 내용 영역 -->
+    <div class="mt-5">
+        <!-- 여러 장의 이미지 출력 -->
+        <div class="d-flex flex-wrap justify-content-center">
+            <div th:each="image : ${post.originalImageLinks}" class="p-2">
+                <img th:src="${image}" class="img-thumbnail" style="width: 150px; height: auto;" alt="원본 이미지">
+            </div>
+        </div>
+
+        <!-- 게시글 내용 -->
+        <div class="mt-4">
+            <h3>
+                <span th:text="${post.title}">게시글 제목</span>
+                <!-- 관리자 전용 공개/비공개 상태 표시 -->
+                <span th:if="${isAdmin}"
+                      th:classappend="${post.isVisible ? 'badge bg-success' : 'badge bg-secondary'}"
+                      style="margin-left: 10px;">
+                    <span th:text="${post.isVisible ? '공개' : '비공개'}"></span>
+                </span>
+            </h3>
+            <p class="text-muted" th:text="'작성자: ' + ${post.author}"></p>
+            <p class="text-muted" th:text="'등록일: ' + ${#dates.format(post.createdAt, 'yyyy-MM-dd HH:mm')}"></p>
+            <p th:text="${post.contentText}">게시글 본문 내용</p>
+        </div>
+
+        <!-- 지도 표시 영역 -->
+        <h4>모임 장소</h4>
+        <div id="map" style="width: 100%; height: 400px;"></div>
+
+        <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=9n21s23li1"></script>
+        <script>
+            var map;
+
+            function initializeMap() {
+                var lat = /*[[${post.lat}]]*/ 37.3595316; // 기본값
+                var lng = /*[[${post.lng}]]*/ 127.1052133; // 기본값
+
+                map = new naver.maps.Map("map", {
+                    center: new naver.maps.LatLng(lat, lng),
+                    zoom: 15,
+                });
+
+                var marker = new naver.maps.Marker({
+                    position: new naver.maps.LatLng(lat, lng),
+                    map: map
+                });
+            }
+
+            naver.maps.onJSContentLoaded = initializeMap; // 지도가 로드된 후 초기화 함수 호출
+        </script>
+    </div>
+
+    <!--    댓글 영역-->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="my-4 ">
+                <button class="btn btn-info addReplyBtn">댓글추가</button>
+                <!--                sec:authorize="isAuthenticated()" 시큐리티 쓸때 버튼 뒤에 붙히면 됨-->
+            </div>
+            <ul class="list-group replyList">
+                댓글 리스트 영역
+            </ul>
+        </div>
+    </div>
+    <div class="row mt-3">
+        <div class="col">
+            <ul class="pagination replyPaging">
+            </ul>
+        </div>
+    </div>
+
+    <div class="modal registerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">댓글 등록</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Reply Text</span>
+                        <input type="text" class="form-control replyText" >
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Replyer</span>
+                        <input type="text" class="form-control replyer" >
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary registerBtn">Register</button>
+                    <button type="button" class="btn btn-outline-dark closeRegisterBtn" >Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--    -->
+
+
+    <!--    댓글영역끝-->
+
+    <!-- 신고하기 모달 -->
+    <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportModalLabel">신고하기</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="reportForm">
+                        <div class="mb-3">
+                            <label for="category" class="form-label">신고 유형:</label>
+                            <select class="form-select" id="category" required>
+                                <option value="">선택하세요</option>
+                                <option value="ABUSE">욕설</option>
+                                <option value="SPAM">스팸</option>
+                                <option value="ADVERTISING">광고</option>
+                                <option value="PROMOTION">홍보</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">신고 사유:</label>
+                            <textarea class="form-control" id="reason" rows="3" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-primary" id="submitReport">신고하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        // 신고하기 모달 열기 이벤트
+        document.getElementById('reportModal').addEventListener('show.bs.modal', function (event) {
+            const postId = /*[[${post.postId}]]*/ '[[${post.postId}]]'; // Thymeleaf 변수
+
+            // 버튼 클릭 시 신고 처리
+            document.getElementById('submitReport').onclick = function () {
+                const category = document.getElementById('category').value;
+                const reason = document.getElementById('reason').value;
+
+                fetch('/report/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ postId: postId, category: category, reason: reason }),
+                })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    })
+                    .then(data => {
+                        alert(data);
+                        bootstrap.Modal.getInstance(document.getElementById('reportModal')).hide();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('신고에 실패했습니다. 다시 시도해 주세요.');
+                    });
+            };
+        });
+    </script>
+    <script layout:fragment="script" th:inline="javascript">
+
+        const postId = [[${post.postId}]]
+
+        // document.addEventListener("DOMContentLoaded", function() {
+
+
+        const replyList = document.querySelector('.replyList')
+        let str = ''
+
+        function printList(dtoList) {
+            if (dtoList && dtoList.length > 0) {
+                for (const dto of dtoList) {
+                    str += `<li class="list-group-item d-flex postItem">
+            <span class="col-1">${dto.replyId}</span>
+            <span class="col-6" data-rno="${dto.replyId}">${dto.content}</span>
+            <span class="col-2">${dto.username}</span>
+            <span class="col-2">${dto.regDate}</span>
+            <button class="btn btn-outline-dark addCommentBtn" data-cno="${dto.postId}">댓글작성</button>
+            </li>`
+                    if (dto.children && dto.children.length > 0) {
+                        str += `<ul>`
+                        printList(dto.children)
+                        str += `</ul>`
+                    }
+                }
+
+            }
+            replyList.innerHTML = str
+
+        }
+
+        function printReplies() {
+            // alert("aaaaaaaaaaaaaa")
+            str = ''
+            replyList.clear
+            getList(postId).then(
+                data => {
+                    console.log(data)
+
+                    printList(data)
+                }
+            ).catch(e => {
+                console.error(e)
+            })
+        }
+
+        printReplies();
+
+        const registerModal = new bootstrap.Modal(document.querySelector(".registerModal"))
+        const registerBtn = document.querySelector(".registerBtn")
+        const replyText = document.querySelector(".replyText")
+        const replyer = document.querySelector(".replyer")
+        const closeRegisterBtn = document.querySelector(".closeRegisterBtn")
+        let parentId = ''
+
+        document.querySelector(".addReplyBtn").addEventListener("click", function (e) {
+            alert("aaaaaaaaaaaaaaaa")
+            registerModal.show()
+        }, false)
+
+        closeRegisterBtn.addEventListener("click", function (e) {
+            registerModal.hide()
+        }, false)
+
+        registerBtn.addEventListener("click", function (e) {
+            let replyObj = null
+            if (parentId == '') {
+                replyObj = {
+                    content: replyText.value,
+                    username: replyer.value,
+                }
+            } else {
+                replyObj = {
+                    content: replyText.value,
+                    username: replyer.value,
+                    parentId: parentId
+
+                }
+            }
+            addReply(replyObj, postId).then(result => {
+                alert(result)
+                registerModal.hide()
+                replyText.value = ''
+                replyer.value = ''
+                printReplies()
+            }).catch(e => {
+                alert("Exception...")
+            })
+        }, false)
+
+        //const addReplyBtn = document.querySelector(".replyList")
+
+        replyList.addEventListener("click", function (e) {
+            parentId = e.target.getAttribute("data-cno")
+            registerModal.show()
+        }, false)
+        // })
+    </script>
+</div>
+</body>
+</html>

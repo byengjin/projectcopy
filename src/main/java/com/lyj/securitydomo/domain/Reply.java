@@ -2,10 +2,7 @@ package com.lyj.securitydomo.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -43,6 +40,7 @@ public class Reply {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")  // 부모 댓글 ID
     @JsonIgnore
+    @ToString.Exclude
     private Reply parent;  // 대댓글일 경우 부모 댓글을 참조
 
     @Builder.Default

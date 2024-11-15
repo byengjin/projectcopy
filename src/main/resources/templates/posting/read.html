@@ -98,6 +98,83 @@
         </div>
     </div>
 
+    <!--    댓글 영역-->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="my-4 ">
+                <button class="btn btn-info addReplyBtn">댓글추가</button>
+                <!--                sec:authorize="isAuthenticated()" 시큐리티 쓸때 버튼 뒤에 붙히면 됨-->
+            </div>
+            <ul class="list-group replyList">
+                댓글 리스트 영역
+            </ul>
+        </div>
+    </div>
+    <div class="row mt-3">
+        <div class="col">
+            <ul class="pagination replyPaging">
+            </ul>
+        </div>
+    </div>
+
+    <div class="modal registerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">댓글 등록</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Reply Text</span>
+                        <input type="text" class="form-control replyText" >
+                    </div>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">Replyer</span>
+                        <input type="text" class="form-control replyer" >
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary registerBtn">Register</button>
+                    <button type="button" class="btn btn-outline-dark closeRegisterBtn" >Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal modifyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="cno"></span>
+                <h5 class="modal-title">댓글 수정</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                    <span class="input-group-text">ReplyId</span>
+                    <input type="text" class="form-control replyId" >
+                </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text">Reply Text</span>
+                    <input type="text" class="form-control modifyText" >
+                </div>
+                <div class="input-group mb-3">
+                    <span class="input-group-text">Replyer</span>
+                    <input type="text" class="form-control modifyreplyer" >
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary updateBtn">수정</button>
+                <button type="button" class="btn btn-outline-dark closemodifyBtn" >Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="/js/reply.js"></script>
+    <!--    댓글영역끝-->
     <script th:inline="javascript">
         const lat = '[[${post.lat}]]';
         const lng = '[[${post.lng}]]';  // lng 값을 Thymeleaf 변수에서 가져오기
@@ -149,6 +226,186 @@
                     });
             };
         });
+    </script>
+
+<!--    댓글 스크립트 부분-->
+    <script layout:fragment="script" th:inline="javascript">
+        const postId = [[${post.postId}]];
+
+        const replyList = document.querySelector('.replyList');
+        let str = '';
+
+
+        // 댓글 리스트를 화면에 출력하는 함수
+        function printList(dtoList) {
+            if (dtoList && dtoList.length > 0) {
+                for (const dto of dtoList) {
+                    str += `<li class="list-group-item d-flex postItem">
+                    <span class="col-1">${dto.replyId}</span>
+                    <span class="col-6" data-rno="${dto.replyId}">${dto.content}</span>
+                    <span class="col-2">${dto.username}</span>
+                    <span class="col-2">${dto.regDate}</span>
+                    <button class="btn btn-outline-dark addCommentBtn" data-cno="${dto.replyId}">댓글작성</button>
+                    <button class="btn btn-outline-primary editReplyBtn" data-username="${dto.username}"data-content="${dto.content}" data-replyid="${dto.replyId}">수정</button>
+                    <button class="btn btn-outline-danger deleteReplyBtn" data-replyid="${dto.replyId}">삭제</button>
+                </li>`;
+                    if (dto.children && dto.children.length > 0) {
+                        str += `<ul>`;
+                        printList(dto.children);
+                        str += `</ul>`;
+                    }
+                }
+            }
+            replyList.innerHTML = str;
+        }
+
+        // 댓글 목록을 가져와 화면에 출력하는 함수
+        function printReplies() {
+            str = '';
+            replyList.innerHTML = '';
+            getList(postId).then(data => {
+                console.log(data);
+                printList(data);
+            }).catch(e => {
+                console.error(e);
+            });
+        }
+
+        printReplies();
+
+        const registerModal = new bootstrap.Modal(document.querySelector(".registerModal"));
+        const registerBtn = document.querySelector(".registerBtn");
+        const replyText = document.querySelector(".replyText");
+        const replyer = document.querySelector(".replyer");
+        const closeRegisterBtn = document.querySelector(".closeRegisterBtn");
+
+        let parentId = '';
+
+        const modifyModal = new bootstrap.Modal(document.querySelector(".modifyModal"));
+        const modifyBtn = document.querySelector(".updateBtn");
+        const modifyText = document.querySelector(".modifyText");
+        const modifyreplyer = document.querySelector(".modifyreplyer");
+        const closemodifyBtn = document.querySelector(".closemodifyBtn");
+
+
+
+        // 댓글 추가 버튼 클릭 시 모달을 표시
+        document.querySelector(".addReplyBtn").addEventListener("click", function () {
+            // parentId = ''; // 새로운 댓글 작성 시 부모 ID 초기화
+            replyText.value = '';
+            replyer.value = '';
+            registerModal.show();
+        });
+
+        closeRegisterBtn.addEventListener("click", function () {
+            registerModal.hide();
+        });
+
+        // 댓글 등록 버튼 클릭 시
+        registerBtn.addEventListener("click", function () {
+            parentId
+            const replyObj = {
+                content: replyText.value,
+                username: replyer.value,
+                parentId: parentId || null
+            };
+            addReply(replyObj, postId).then(result => {
+                alert(result);
+                registerModal.hide();
+                printReplies();
+            }).catch(e => {
+                alert("댓글 등록 중 오류 발생");
+            });
+        });
+
+
+
+        // 댓글 리스트 클릭 이벤트 (삭제 및 수정 처리)
+        replyList.addEventListener("click", function (e) {
+            const target = e.target;
+            const replyId = target.getAttribute("data-replyid");
+
+            if(target.classList.contains("addCommentBtn")) {
+                parentId = target.getAttribute("data-cno");
+                console.log(parentId)// 새로운 댓글 작성 시 부모 ID 초기화
+                replyText.value = '';
+                replyer.value = '';
+                registerModal.show();
+
+            }
+
+            // 댓글 삭제 버튼 클릭 시
+            if (target.classList.contains("deleteReplyBtn")) {
+                if (confirm("이 댓글을 삭제하시겠습니까?")) {
+                    removeReply(replyId).then(result => {
+                        alert("댓글이 삭제되었습니다.");
+                        printReplies();
+                    }).catch(e => {
+                        alert("댓글 삭제 중 오류 발생");
+                    });
+                }
+            }
+
+            // 댓글 수정 버튼 클릭 시
+            if (target.classList.contains("editReplyBtn")) {
+                replyId.value = target.getAttribute("data-replyid")
+
+                    modifyText.value = target.getAttribute("data-content");
+                    modifyreplyer.value = target.getAttribute("data-username");
+
+                    modifyModal.show();
+                // }).catch(e => {
+                //     alert("댓글 불러오기 중 오류 발생");
+                // });
+            }
+            modifyBtn.addEventListener("click", function () {
+                const replyObj = {
+                    content: modifyText.value,
+                    username: modifyreplyer.value,
+                    //
+                };
+                modifyReply(replyId.value, replyObj).then(result => {
+                    alert(result);
+                    modifyModal.hide();
+                    printReplies();
+                }).catch(e => {
+                    alert("수정 중 오류 발생");
+                });
+            });
+
+
+        });
+
+        // 컨트롤러의 메서드와 일치하는 API 호출 함수들
+
+        async function getList(postId) {
+            const result = await axios.get(`/replies/${postId}`);
+            return result.data;
+        }
+
+        async function addReply(replyObj, postId) {
+            const response = await axios.post(`/replies/${postId}`, replyObj);
+            return response.data;
+        }
+
+        async function getReply(replyId) {
+            const response = await axios.get(`/replies/${replyId}`);
+            return response.data;
+        }
+
+        async function modifyReply(replyId, content) {
+            const response = await axios.put(`/replies/${replyId}`, content, {
+                headers: {
+                    "Content-Type": "text/plain"
+                }
+            });
+            return response.data;
+        }
+
+        async function removeReply(replyId) {
+            const response = await axios.delete(`/replies/${replyId}`);
+            return response.data;
+        }
     </script>
 </div>
 </body>

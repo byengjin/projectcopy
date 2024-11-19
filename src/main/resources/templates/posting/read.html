@@ -99,6 +99,7 @@
     </div>
 
     <!-- 댓글 입력 부분 -->
+    <!-- 댓글 입력란 -->
     <div class="reply-input-box">
         <div class="user-info">
             <span class="username" th:text="${post.author}"></span>
@@ -113,14 +114,31 @@
         ></textarea>
         <div class="d-flex justify-content-between align-items-center mt-2">
             <span id="charCount">0/100</span>
-            <button class="btn btn-outline-dark registerBtn">등록</button>
+            <button class="btn btn-outline-dark registerBtn">댓글 등록</button>
         </div>
     </div>
 
     <!-- 댓글 리스트 출력 영역 -->
     <ul class="replyList">
-        <!-- 댓글 목록은 자바스크립트에서 동적으로 추가됩니다. -->
+        <!-- 댓글이 동적으로 추가됩니다. -->
     </ul>
+
+    <!-- 대댓글 입력란 (대댓글 작성 시 표시됨) -->
+    <div class="reply-input-box d-none" id="childReplyBox">
+    <textarea
+            id="childReplyContent"
+            class="form-control"
+            rows="2"
+            maxlength="100"
+            placeholder="대댓글을 입력하세요."
+            oninput="updateChildCharCount()"
+    ></textarea>
+        <div class="d-flex justify-content-between align-items-center mt-2">
+            <span id="childCharCount">0/100</span>
+            <button class="btn btn-outline-dark addReplyBtn">대댓글 등록</button>
+        </div>
+    </div>
+
 
 
     <!-- 댓글 등록 완료 메시지 모달 -->
@@ -175,6 +193,9 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="/js/reply.js"></script>
     <!--    댓글영역끝-->
+
+
+
     <script th:inline="javascript">
         const lat = '[[${post.lat}]]';
         const lng = '[[${post.lng}]]';  // lng 값을 Thymeleaf 변수에서 가져오기
@@ -230,22 +251,27 @@
 
 <!--    댓글 스크립트 부분-->
     <script layout:fragment="script" th:inline="javascript">
-        const postId = '[[${post.postId}]]';
-
+        const postId = '[[${post.postId}]]'; // 게시물 ID
         const replyList = document.querySelector('.replyList');
-        let str = '';
+        const registerBtn = document.querySelector('.registerBtn'); // 댓글 등록 버튼
+        const addReplyBtn = document.querySelector('.addReplyBtn'); // 대댓글 등록 버튼
+        const replyContent = document.querySelector('#replyContent'); // 댓글 입력란
+        const childReplyContent = document.querySelector('#childReplyContent'); // 대댓글 입력란
+        const childReplyBox = document.querySelector('#childReplyBox'); // 대댓글 입력 영역
+        let parentReplyId = null; // 대댓글의 부모 ID 저장
 
+        // 댓글 리스트 출력
         // 댓글 리스트를 화면에 출력하는 함수
         function printList(dtoList) {
             if (dtoList && dtoList.length > 0) {
-                dtoList.forEach(dto => {
+                for (const dto of dtoList) {
                     str += `<li class="list-group-item d-flex postItem">
                     <span class="col-1">${dto.replyId}</span>
                     <span class="col-6" data-rno="${dto.replyId}">${dto.content}</span>
                     <span class="col-2">${dto.username}</span>
                     <span class="col-2">${dto.regDate}</span>
-                    <button class="btn btn-outline-dark addCommentBtn" data-cno="${dto.replyId}">댓글작성</button>
-                    <button class="btn btn-outline-primary editReplyBtn" data-username="${dto.username}" data-content="${dto.content}" data-replyid="${dto.replyId}">수정</button>
+                    <button class="btn btn-outline-dark addCommentBtn" data-cno="${dto.postId}">댓글작성</button>
+                    <button class="btn btn-outline-primary editReplyBtn" data-replyid="${dto.replyId}">수정</button>
                     <button class="btn btn-outline-danger deleteReplyBtn" data-replyid="${dto.replyId}">삭제</button>
                 </li>`;
                     if (dto.children && dto.children.length > 0) {
@@ -253,12 +279,11 @@
                         printList(dto.children);
                         str += `</ul>`;
                     }
-                });
+                }
             }
             replyList.innerHTML = str;
         }
 
-        // 댓글 목록을 가져와 화면에 출력하는 함수
         function printReplies() {
             str = '';
             replyList.innerHTML = '';
@@ -272,151 +297,122 @@
 
         printReplies();
 
-        //댓글 등록 모달 부분
-        // const registerModal = new bootstrap.Modal(document.querySelector(".registerModal"));
-        // const completedModal = new bootstrap.Modal(document.querySelector("#completedModal")); // 완료 모달
-        // const registerBtn = document.querySelector(".registerBtn");
-        // const replyText = document.querySelector(".replyText");
-        // const replyer = document.querySelector(".replyer");
-        // const closeRegisterBtn = document.querySelector(".closeRegisterBtn");
-
-
-
-        //댓글 수정 모달 부분
-        const modifyModal = new bootstrap.Modal(document.querySelector(".modifyModal"));
-        const modifyBtn = document.querySelector(".updateBtn");
-        const modifyText = document.querySelector(".modifyText");
-        const modifyreplyer = document.querySelector(".modifyreplyer");
-        const closemodifyBtn = document.querySelector(".closemodifyBtn");
-
-        // 댓글 추가 버튼 클릭 시 모달을 표시하지 않고 댓글 입력란만 초기화
-        document.querySelector("#submitReply").addEventListener("click", function() {
-            const replyContent = document.querySelector("#replyContent").value;
-            const replyObj = {
-                content: replyContent,
-                username: replyer  // 예시로 사용자 이름을 설정
-            };
-            addReply(replyObj, postId).then(result => {
-                alert("댓글이 등록되었습니다.");
-                printReplies();
-            }).catch(e => {
-                alert("댓글 등록 중 오류 발생");
-            });
-        });
-
-
-        // 댓글 등록 버튼 클릭 시
-        registerBtn.addEventListener("click", function () {
-            const replyObj = {
-                content: replyText.value,
-                username: replyer.value,
-                parentId: parentId || null
-            };
-            addReply(replyObj, postId).then(result => {
-                alert(result); // 등록 완료 메시지 출력
-                printReplies(); // 댓글 리스트 새로 고침
-                completedModal.show(); // 댓글 등록 완료 모달 표시
-            }).catch(e => {
-                alert("댓글 등록 중 오류 발생");
-            });
-        });
-
-        // 댓글 리스트 클릭 이벤트 (삭제 및 수정 처리)
-        replyList.addEventListener("click", function (e) {
-            const target = e.target;
-            const replyId = target.getAttribute("data-replyid");
-
-            if(target.classList.contains("addCommentBtn")) {
-                parentId = target.getAttribute("data-cno");
-                replyText.value = '';
-                replyer.value = '';
+        // 댓글 등록 이벤트
+        registerBtn.addEventListener('click', () => {
+            const content = replyContent.value.trim();
+            if (!content) {
+                alert('댓글 내용을 입력하세요.');
+                return;
             }
 
-            // 댓글 삭제 버튼 클릭 시
-            if (target.classList.contains("deleteReplyBtn")) {
-                if (confirm("이 댓글을 삭제하시겠습니까?")) {
-                    removeReply(replyId).then(result => {
-                        alert("댓글이 삭제되었습니다.");
-                        printReplies();
-                    }).catch(e => {
-                        alert("댓글 삭제 중 오류 발생");
-                    });
+            const replyObj = { content, username: '작성자 이름' }; // 작성자 이름 동적으로 설정
+            addReply(replyObj, postId).then(() => {
+                alert('댓글이 등록되었습니다.');
+                replyContent.value = ''; // 입력란 초기화
+                printReplies(); // 리스트 갱신
+            }).catch(e => {
+                alert('댓글 등록 중 오류 발생');
+                console.error(e);
+            });
+        });
+
+        // 대댓글 등록 이벤트
+        document.body.addEventListener('click', (e) => {
+            if (e.target.classList.contains('addReplyBtn')) {
+                const content = childReplyContent.value.trim();
+                if (!content) {
+                    alert('대댓글 내용을 입력하세요.');
+                    return;
                 }
-            }
 
-            // 댓글 수정 버튼 클릭 시
-            if (target.classList.contains("editReplyBtn")) {
-                replyId.value = target.getAttribute("data-replyid");
-
-                modifyText.value = target.getAttribute("data-content");
-                modifyreplyer.value = target.getAttribute("data-username");
-
-                modifyModal.show();
-            }
-
-            modifyBtn.addEventListener("click", function () {
-                const replyObj = {
-                    content: modifyText.value,
-                    username: modifyreplyer.value,
-                };
-                modifyReply(replyId, replyObj).then(result => {
-                    alert(result);
-                    modifyModal.hide();
-                    printReplies();
+                const replyObj = { content, username: '작성자 이름', parentId: parentReplyId }; // 작성자 이름 동적으로 설정
+                addReply(replyObj, postId).then(() => {
+                    alert('대댓글이 등록되었습니다.');
+                    childReplyContent.value = ''; // 입력란 초기화
+                    childReplyBox.classList.add('d-none'); // 대댓글 입력란 숨기기
+                    printReplies(); // 리스트 갱신
                 }).catch(e => {
-                    alert("수정 중 오류 발생");
+                    alert('대댓글 등록 중 오류 발생');
+                    console.error(e);
                 });
-            });
+            }
+
+            // 대댓글 작성 버튼 클릭 시
+            if (e.target.classList.contains('addCommentBtn')) {
+                parentReplyId = e.target.getAttribute('data-replyid'); // 부모 댓글 ID 저장
+                childReplyBox.classList.remove('d-none'); // 대댓글 입력란 표시
+                childReplyContent.value = ''; // 초기화
+            }
         });
 
-        function updateCharCount(event) {
-            var count = event.target.value.length;
-            document.getElementById('charCount').innerText = 'Characters: ' + count;
+        function printReplies() {
+            replyList.innerHTML = ''; // 기존 리스트 초기화
+            getList(postId).then(data => {
+                if (data && data.length > 0) {
+                    replyList.innerHTML = printList(data); // 댓글 목록 출력
+                } else {
+                    replyList.innerHTML = '<li>등록된 댓글이 없습니다.</li>'; // 댓글이 없을 경우
+                }
+            }).catch(e => {
+                console.error('댓글 목록 불러오기 오류:', e);
+                replyList.innerHTML = '<li>댓글을 불러오는 중 오류가 발생했습니다.</li>'; // 오류 메시지 출력
+            });
+        }
+
+        function printList(dtoList) {
+            let str = '';
+            dtoList.forEach(dto => {
+                str += `
+            <li class="list-group-item d-flex postItem">
+                <span class="col-1">${dto.replyId}</span>
+                <span class="col-6">${dto.content}</span>
+                <span class="col-2">${dto.username}</span>
+                <span class="col-2">${dto.regDate}</span>
+                <button class="btn btn-outline-dark addCommentBtn" data-replyid="${dto.replyId}">대댓글 작성</button>
+            </li>`;
+                if (dto.children && dto.children.length > 0) {
+                    str += `<ul>`;
+                    str += printList(dto.children);
+                    str += `</ul>`;
+                }
+            });
+            return str;
         }
 
 
-        // 컨트롤러의 메서드와 일치하는 API 호출 함수들
+
+        // 글자수 표시 함수
+        function updateCharCount() {
+            const contentLength = replyContent.value.length;
+            document.getElementById('charCount').textContent = `${contentLength}/100`;
+        }
+
+        function updateChildCharCount() {
+            const contentLength = childReplyContent.value.length;
+            document.getElementById('childCharCount').textContent = `${contentLength}/100`;
+        }
+
+        // API 호출 함수들
         async function getList(postId) {
             try {
-                const result = await axios.get(`/replies/${postId}`);
-                console.log('댓글 리스트 응답:', result.data);  // API 응답 확인
-                return result.data;
+                const response = await axios.get(`/replies/${postId}`);
+                return response.data;
             } catch (error) {
-                console.error('댓글 리스트 가져오기 오류:', error);
+                console.error(error);
                 throw error;
             }
         }
 
         async function addReply(replyObj, postId) {
-            const response = await axios.post(`/replies/${postId}`, replyObj);
-            return response.data;
+            try {
+                const response = await axios.post(`/replies/${postId}`, replyObj);
+                return response.data;
+            } catch (error) {
+                console.error(error);
+                throw error;
+            }
         }
 
-        async function getReply(replyId) {
-            const response = await axios.get(`/replies/${replyId}`);
-            return response.data;
-        }
-
-        async function modifyReply(replyId, content) {
-            const response = await axios.put(`/replies/${replyId}`, content, {
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-            return response.data;
-        }
-
-        async function removeReply(replyId) {
-            const response = await axios.delete(`/replies/${replyId}`);
-            return response.data;
-        }
-
-        function updateCharCount() {
-            const replyContent = document.getElementById("replyContent");
-            const charCount = document.getElementById("charCount");
-            const contentLength = replyContent.value.length;
-            charCount.textContent = `${contentLength}/100`;
-        }
 
     </script>
 

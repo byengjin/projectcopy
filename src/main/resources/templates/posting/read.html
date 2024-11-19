@@ -98,50 +98,49 @@
         </div>
     </div>
 
-    <!--    댓글 영역-->
-    <div class="row mt-3">
-        <div class="col-md-12">
-            <div class="my-4 ">
-                <textarea class="form-control replyText" placeholder="댓글을 입력하세요..."></textarea>
-                <button type="button" class="btn btn-primary registerBtn">등록</button></button>
-                <!--                sec:authorize="isAuthenticated()" 시큐리티 쓸때 버튼 뒤에 붙히면 됨-->
-            </div>
-            <ul class="list-group replyList">
-                댓글 리스트 영역
-            </ul>
+    <!-- 댓글 입력 부분 -->
+    <div class="reply-input-box">
+        <div class="user-info">
+            <span class="username" th:text="${post.author}"></span>
         </div>
-    </div>
-    <div class="row mt-3">
-        <div class="col">
-            <ul class="pagination replyPaging">
-            </ul>
+        <textarea
+                id="replyContent"
+                class="form-control"
+                rows="4"
+                maxlength="100"
+                placeholder="댓글을 입력하세요."
+                oninput="updateCharCount()"
+        ></textarea>
+        <div class="d-flex justify-content-between align-items-center mt-2">
+            <span id="charCount">0/100</span>
+            <button class="btn btn-outline-dark registerBtn">등록</button>
         </div>
     </div>
 
-    <div class="modal registerModal" tabindex="-1">
+    <!-- 댓글 리스트 출력 영역 -->
+    <ul class="replyList">
+        <!-- 댓글 목록은 자바스크립트에서 동적으로 추가됩니다. -->
+    </ul>
+
+
+    <!-- 댓글 등록 완료 메시지 모달 -->
+    <div class="modal fade" id="completedModal" tabindex="-1" aria-labelledby="completedModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">댓글 등록</h5>
+                    <h5 class="modal-title" id="completedModalLabel">댓글 등록 완료</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="input-group mb-3">
-                        <span class="input-group-text">Reply Text</span>
-                        <input type="text" class="form-control replyText" >
-                    </div>
-                    <div class="input-group mb-3">
-                        <span class="input-group-text">Replyer</span>
-                        <input type="text" class="form-control replyer" >
-                    </div>
+                    댓글이 등록되었습니다!
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary registerBtn">Register</button>
-                    <button type="button" class="btn btn-outline-dark closeRegisterBtn" >Close</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">확인</button>
                 </div>
             </div>
         </div>
     </div>
+
     <div class="modal modifyModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -231,23 +230,22 @@
 
 <!--    댓글 스크립트 부분-->
     <script layout:fragment="script" th:inline="javascript">
-        const postId = [[${post.postId}]];
+        const postId = '[[${post.postId}]]';
 
         const replyList = document.querySelector('.replyList');
         let str = '';
 
-
         // 댓글 리스트를 화면에 출력하는 함수
         function printList(dtoList) {
             if (dtoList && dtoList.length > 0) {
-                for (const dto of dtoList) {
+                dtoList.forEach(dto => {
                     str += `<li class="list-group-item d-flex postItem">
                     <span class="col-1">${dto.replyId}</span>
                     <span class="col-6" data-rno="${dto.replyId}">${dto.content}</span>
                     <span class="col-2">${dto.username}</span>
                     <span class="col-2">${dto.regDate}</span>
                     <button class="btn btn-outline-dark addCommentBtn" data-cno="${dto.replyId}">댓글작성</button>
-                    <button class="btn btn-outline-primary editReplyBtn" data-username="${dto.username}"data-content="${dto.content}" data-replyid="${dto.replyId}">수정</button>
+                    <button class="btn btn-outline-primary editReplyBtn" data-username="${dto.username}" data-content="${dto.content}" data-replyid="${dto.replyId}">수정</button>
                     <button class="btn btn-outline-danger deleteReplyBtn" data-replyid="${dto.replyId}">삭제</button>
                 </li>`;
                     if (dto.children && dto.children.length > 0) {
@@ -255,7 +253,7 @@
                         printList(dto.children);
                         str += `</ul>`;
                     }
-                }
+                });
             }
             replyList.innerHTML = str;
         }
@@ -274,48 +272,32 @@
 
         printReplies();
 
+        //댓글 등록 모달 부분
         // const registerModal = new bootstrap.Modal(document.querySelector(".registerModal"));
+        // const completedModal = new bootstrap.Modal(document.querySelector("#completedModal")); // 완료 모달
         // const registerBtn = document.querySelector(".registerBtn");
         // const replyText = document.querySelector(".replyText");
         // const replyer = document.querySelector(".replyer");
         // const closeRegisterBtn = document.querySelector(".closeRegisterBtn");
 
-        const replyText = document.querySelector(".replyText"); // 새 텍스트 영역
-        const registerBtn = document.querySelector(".registerBtn"); // 새 등록 버튼
-        let parentId = '';
 
 
+        //댓글 수정 모달 부분
         const modifyModal = new bootstrap.Modal(document.querySelector(".modifyModal"));
         const modifyBtn = document.querySelector(".updateBtn");
         const modifyText = document.querySelector(".modifyText");
         const modifyreplyer = document.querySelector(".modifyreplyer");
         const closemodifyBtn = document.querySelector(".closemodifyBtn");
 
-
-
-        // 댓글 추가 버튼 클릭 시 모달을 표시
-        document.querySelector(".addReplyBtn").addEventListener("click", function () {
-            // parentId = ''; // 새로운 댓글 작성 시 부모 ID 초기화
-            replyText.value = '';
-            replyer.value = '';
-            registerModal.show();
-        });
-
-        closeRegisterBtn.addEventListener("click", function () {
-            registerModal.hide();
-        });
-
-        // 댓글 등록 버튼 클릭 시
-        registerBtn.addEventListener("click", function () {
-            parentId
+        // 댓글 추가 버튼 클릭 시 모달을 표시하지 않고 댓글 입력란만 초기화
+        document.querySelector("#submitReply").addEventListener("click", function() {
+            const replyContent = document.querySelector("#replyContent").value;
             const replyObj = {
-                content: replyText.value,
-                username: replyer.value,
-                parentId: parentId || null
+                content: replyContent,
+                username: replyer  // 예시로 사용자 이름을 설정
             };
             addReply(replyObj, postId).then(result => {
-                alert(result);
-                registerModal.hide();
+                alert("댓글이 등록되었습니다.");
                 printReplies();
             }).catch(e => {
                 alert("댓글 등록 중 오류 발생");
@@ -323,6 +305,21 @@
         });
 
 
+        // 댓글 등록 버튼 클릭 시
+        registerBtn.addEventListener("click", function () {
+            const replyObj = {
+                content: replyText.value,
+                username: replyer.value,
+                parentId: parentId || null
+            };
+            addReply(replyObj, postId).then(result => {
+                alert(result); // 등록 완료 메시지 출력
+                printReplies(); // 댓글 리스트 새로 고침
+                completedModal.show(); // 댓글 등록 완료 모달 표시
+            }).catch(e => {
+                alert("댓글 등록 중 오류 발생");
+            });
+        });
 
         // 댓글 리스트 클릭 이벤트 (삭제 및 수정 처리)
         replyList.addEventListener("click", function (e) {
@@ -331,11 +328,8 @@
 
             if(target.classList.contains("addCommentBtn")) {
                 parentId = target.getAttribute("data-cno");
-                console.log(parentId)// 새로운 댓글 작성 시 부모 ID 초기화
                 replyText.value = '';
                 replyer.value = '';
-                registerModal.show();
-
             }
 
             // 댓글 삭제 버튼 클릭 시
@@ -352,23 +346,20 @@
 
             // 댓글 수정 버튼 클릭 시
             if (target.classList.contains("editReplyBtn")) {
-                replyId.value = target.getAttribute("data-replyid")
+                replyId.value = target.getAttribute("data-replyid");
 
-                    modifyText.value = target.getAttribute("data-content");
-                    modifyreplyer.value = target.getAttribute("data-username");
+                modifyText.value = target.getAttribute("data-content");
+                modifyreplyer.value = target.getAttribute("data-username");
 
-                    modifyModal.show();
-                // }).catch(e => {
-                //     alert("댓글 불러오기 중 오류 발생");
-                // });
+                modifyModal.show();
             }
+
             modifyBtn.addEventListener("click", function () {
                 const replyObj = {
                     content: modifyText.value,
                     username: modifyreplyer.value,
-                    //
                 };
-                modifyReply(replyId.value, replyObj).then(result => {
+                modifyReply(replyId, replyObj).then(result => {
                     alert(result);
                     modifyModal.hide();
                     printReplies();
@@ -376,15 +367,24 @@
                     alert("수정 중 오류 발생");
                 });
             });
-
-
         });
 
-        // 컨트롤러의 메서드와 일치하는 API 호출 함수들
+        function updateCharCount(event) {
+            var count = event.target.value.length;
+            document.getElementById('charCount').innerText = 'Characters: ' + count;
+        }
 
+
+        // 컨트롤러의 메서드와 일치하는 API 호출 함수들
         async function getList(postId) {
-            const result = await axios.get(`/replies/${postId}`);
-            return result.data;
+            try {
+                const result = await axios.get(`/replies/${postId}`);
+                console.log('댓글 리스트 응답:', result.data);  // API 응답 확인
+                return result.data;
+            } catch (error) {
+                console.error('댓글 리스트 가져오기 오류:', error);
+                throw error;
+            }
         }
 
         async function addReply(replyObj, postId) {
@@ -400,7 +400,7 @@
         async function modifyReply(replyId, content) {
             const response = await axios.put(`/replies/${replyId}`, content, {
                 headers: {
-                    "Content-Type": "text/plain"
+                    "Content-Type": "application/json"
                 }
             });
             return response.data;
@@ -410,7 +410,17 @@
             const response = await axios.delete(`/replies/${replyId}`);
             return response.data;
         }
+
+        function updateCharCount() {
+            const replyContent = document.getElementById("replyContent");
+            const charCount = document.getElementById("charCount");
+            const contentLength = replyContent.value.length;
+            charCount.textContent = `${contentLength}/100`;
+        }
+
     </script>
+
+
 </div>
 </body>
 </html>

@@ -22,7 +22,7 @@ public class ReplyController {
 
     @PostMapping("/{postId}")
     public ResponseEntity<Long> createReply(@PathVariable Long postId, @RequestBody ReplyDTO replyDTO) {
-        log.info(replyDTO);
+        log.info("ReplyDTO: " +replyDTO);
         Reply reply=replyService.createReply(postId, replyDTO);
         return ResponseEntity.ok(reply.getReplyId());
     }

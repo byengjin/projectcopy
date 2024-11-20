@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.w3.org/1999/xhtml" layout:decorate="~{layout/basic.html}">
+
+<head>
+  <meta charset="UTF-8">
+  <title>게시글 목록</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- custom 스타일 파일 연결 -->
+</head>
+
+<body>
+<div layout:fragment="content">
+  <header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+      <div class="text-center text-white">
+        <h1 class="display-4 fw-bolder">BootakHEY!</h1>
+        <p class="lead fw-normal text-white-50 mb-0">혼자가 아니에요!</p>
+      </div>
+    </div>
+  </header>
+  <!-- 검색창 섹션 -->
+  <div class="container mt-4">
+    <form action="/posting/list" method="get">
+      <!-- 검색 시 페이지 크기를 설정하는 hidden 필드 -->
+      <input type="hidden" name="size" th:value="${pageRequestDTO.size}">
+      <div class="input-group mb-3">
+        <!-- 검색 필터 옵션 -->
+        <select class="form-select" name="type">
+          <option value="">---</option>
+          <option value="t" th:selected="${pageRequestDTO.type =='t'}">제목</option>
+          <option value="c" th:selected="${pageRequestDTO.type =='c'}">내용</option>
+        </select>
+        <!-- 키워드 입력 필드 -->
+        <input type="text" class="form-control" name="keyword" th:value="${pageRequestDTO.keyword}">
+        <!-- 검색 및 초기화 버튼 -->
+        <button class="btn btn-outline-secondary searchBtn" type="submit">Search</button>
+        <button class="btn btn-outline-secondary clearBtn" type="button" onclick="location.href='/posting/list'">Clear</button>
+      </div>
+    </form>
+  </div>
+  <!-- 게시글 목록 섹션 -->
+  <section class="py-5">
+    <div class="container px-4 px-lg-5 mt-5">
+      <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+        <div class="col mb-5" th:each="post, iterStat : ${posts}">
+          <div class="card h-100" th:classappend="${isAuthor[iterStat.index] ? 'border-primary' : ''}">
+            <a th:href="@{/posting/read/{postId}(postId=${post.postId})}" class="text-decoration-none">
+              <img class="card-img-top img-thumbnail" th:src="@{${post.getThumbnail()}}" alt="이미지"/>
+            </a>
+            <div class="card-body p-4">
+              <div class="text-center">
+                <h5 class="fw-bolder" th:text="${post.title}"></h5>
+                <p th:text="'작성자: ' + ${post.author}"></p>
+                <p th:text="'모집 상태: ' + ${post.status}"></p>
+                <p th:text="'모집 인원: ' + ${post.requiredParticipants} + '명'"></p>
+                <!-- 작성자 본인 글 표시 -->
+                <div th:if="${isAuthor[iterStat.index]}" class="badge text-white position-absolute bottom-0 start-50 translate-middle-x mb-3"
+                     style="background-color: #6c757d; padding: 0.5rem 1rem; border-radius: 15px;">
+                  내가 작성한 글
+                </div>              </div>
+            </div>
+            <!-- 게시글 목록 카드 부분 수정 -->
+            <div class="card-footer p-4 pt-0 border-top-0 bg-transparent">
+              <div class="text-center" th:attr="data-post-id=${post.postId}">
+                <!-- 신고하기 버튼 (오른쪽 아래에 배치) -->
+                <button type="button" class="btn btn-outline-danger btn-sm mt-auto position-absolute bottom-0 end-0 me-3 mb-3"
+                        data-bs-toggle="modal"
+                        data-bs-target="#reportModal"
+                        th:if="${!isAdmin && !isAuthor[iterStat.index]}">
+                  신고하기
+                </button>
+
+                <!-- 신청하기 버튼 (가운데 아래에 배치) -->
+                <button type="button" class="btn btn-primary btn-sm mt-auto position-absolute bottom-0 start-50 translate-middle-x mb-3"
+                        data-bs-toggle="modal"
+                        data-bs-target="#applyModal"
+                        th:if="${!isAuthor[iterStat.index]}">
+                  신청하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+      <li class="page-item" th:each="i : ${#numbers.sequence(1, totalPages)}" th:class="${currentPage == i} ? 'active'">
+        <a th:href="@{/posting/list(page=${i}, size=8, type=${type}, keyword=${keyword})}" class="page-link" th:text="${i}"></a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- 신고하기 모달 -->
+  <div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="reportModalLabel">신고하기</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="reportForm">
+            <div class="mb-3">
+              <label for="category" class="form-label">신고 유형:</label>
+              <select class="form-select" id="category" required>
+                <option value="">선택하세요</option>
+                <option value="ABUSE">욕설</option>
+                <option value="SPAM">스팸</option>
+                <option value="ADVERTISING">광고</option>
+                <option value="PROMOTION">홍보</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="reason" class="form-label">신고 사유:</label>
+              <textarea class="form-control" id="reason" rows="3" required></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" id="submitReport">신고하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 신청하기 모달 -->
+  <div class="modal fade" id="applyModal" tabindex="-1" aria-labelledby="applyModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="applyModalLabel">신청하기</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="applyForm">
+            <div class="mb-3">
+              <label for="applicationReason" class="form-label">신청 사유:</label>
+              <textarea class="form-control" id="applicationReason" rows="3" required></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="button" class="btn btn-primary" id="submitApplication">신청하기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // 신고하기 모달 이벤트 핸들러
+      document.getElementById('reportModal').addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const postId = button.closest('.text-center').getAttribute('data-post-id');
+
+        document.getElementById('submitReport').onclick = function () {
+          const category = document.getElementById('category').value;
+          const reason = document.getElementById('reason').value;
+
+          if (!category || !reason.trim()) {
+            alert('신고 유형과 사유를 입력해주세요.');
+            return;
+          }
+
+          console.log('신고하기 요청 - postId:', postId, '카테고리:', category, '사유:', reason);
+
+          fetch('/report/create', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({postId: postId, category: category, reason: reason}),
+          })
+                  .then(response => {
+                    console.log('신고 응답 상태 코드:', response.status);
+                    if (!response.ok) throw new Error('신고 요청 실패');
+                    return response.text();
+                  })
+                  .then(data => {
+                    console.log('신고 응답 데이터:', data);
+                    alert(data);
+                    bootstrap.Modal.getInstance(document.getElementById('reportModal')).hide();
+                  })
+                  .catch(error => {
+                    console.error('신고 실패:', error.message);
+                    alert('신고에 실패했습니다. 다시 시도해 주세요.');
+                  });
+        };
+      });
+
+      // 모달이 닫힐 때 입력 필드 초기화 (신고하기)
+      document.getElementById('reportModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('category').value = ''; // 신고 카테고리 초기화
+        document.getElementById('reason').value = ''; // 신고 사유 초기화
+      });
+
+      // 신청하기 버튼 클릭 시 postId 설정
+      document.querySelectorAll('.btn-primary[data-bs-target="#applyModal"]').forEach(button => {
+        button.addEventListener('click', function () {
+          const postId = this.closest('.text-center').getAttribute('data-post-id');
+          console.log('모달 열기 - postId:', postId);
+
+          // 모달의 신청하기 버튼에 postId 설정
+          document.getElementById('submitApplication').setAttribute('data-post-id', postId);
+        });
+      });
+
+      // 신청하기 모달에서 신청하기 버튼 클릭 이벤트
+      document.getElementById('submitApplication').addEventListener('click', function () {
+        const postId = parseInt(this.getAttribute('data-post-id'), 10);
+        const applicationReason = document.getElementById('applicationReason').value.trim();
+
+        if (!applicationReason) {
+          alert('신청 사유를 입력해주세요.');
+          return;
+        }
+
+        console.log('신청하기 요청 - postId:', postId, '신청 이유:', applicationReason);
+
+        fetch('/request/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            postId: postId,
+            contentText: applicationReason,
+          }),
+        })
+                .then(response => {
+                  console.log('신청 응답 상태 코드:', response.status);
+                  if (!response.ok) {
+                    return response.text().then(err => {
+                      console.error('신청 실패:', err);
+                      throw new Error(err);
+                    });
+                  }
+                  return response.text();
+                })
+                .then(data => {
+                  console.log('신청 응답 데이터:', data);
+                  alert('신청이 완료되었습니다.');
+                  bootstrap.Modal.getInstance(document.getElementById('applyModal')).hide();
+                })
+                .catch(error => {
+                  console.error('신청 실패:', error.message);
+                  alert('신청에 실패했습니다. 이유: ' + error.message);
+                });
+      });
+
+      // 모달 닫힐 때 입력 필드 초기화 (신청하기)
+      document.getElementById('applyModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('applicationReason').value = ''; // 입력 필드 초기화
+      });
+    });
+  </script>
+</div>
+</body>
+</html>

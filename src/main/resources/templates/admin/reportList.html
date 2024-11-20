@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/basic.html}">
+<head>
+    <meta charset="UTF-8">
+    <title>신고 글 관리</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<div layout:fragment="content">
+    <header class="bg-dark py-5">
+        <div class="container px-4 px-lg-5 my-5">
+            <div class="text-center text-white">
+                <h1 class="display-4 fw-bolder">신고 글 관리</h1>
+                <p class="lead fw-normal text-white-50 mb-0">관리자는 신고된 글을 처리합니다.</p>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mt-4">
+        <!-- 필터 토글 -->
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="reportToggleSwitch" th:checked="${filter == 'in-progress'}">
+            <label class="form-check-label" for="reportToggleSwitch" id="reportToggleLabel">
+                <span th:text="${filter == 'in-progress' ? '전체글 보기' : '공개글 보기'}"></span>
+            </label>
+        </div>
+
+        <!-- 신고 글 목록 테이블 -->
+        <div class="row mt-3">
+            <div class="col-12">
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <th>글 제목</th>
+                        <th>신고 횟수</th>
+                        <th>상세보기</th>
+                        <th>상태</th> <!-- 처리 상태 표시 -->
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="report : ${reportList}">
+                        <td th:text="${report.postTitle}"></td> <!-- post의 title을 의미,글 제목 -->
+                        <td th:text="${report.reportCount}"></td> <!-- 신고 횟수 -->
+                        <td>
+                            <a th:href="@{/posting/read/{postId}(postId=${report.postId})}" class="btn btn-info">상세보기</a>
+                        </td>
+                        <td>
+                            <!-- 공개/비공개 처리 버튼 -->
+                            <button class="btn"
+                                    th:classappend="${report.status == 'HIDDEN' ? 'btn-warning' : 'btn-success'}"
+                                    th:text="${report.status == 'HIDDEN' ? '공개 처리' : '비공개 처리'}"
+                                    th:data-status="${report.status}"
+                                    th:data-reportId="${report.reportId}"
+                                    onclick="confirmToggleVisibility(this)"> <!-- 여기에 onclick 추가 -->
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const toggleSwitch = document.getElementById("reportToggleSwitch");
+
+            // 필터 토글 비동기 요청
+            toggleSwitch.addEventListener("change", function() {
+                const filterType = toggleSwitch.checked ? "in-progress" : "all";  // 필터 상태 결정
+                fetchReports(filterType);  // 필터링된 데이터를 가져오기 위한 함수 호출
+            });
+        });
+
+        // 비동기적으로 데이터를 가져와 페이지에 반영하는 함수
+        function fetchReports(filterType) {
+            const url = `/admin/reports?filter=${filterType}`;
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("네트워크 응답이 올바르지 않습니다.");
+                    }
+                    return response.json();  // JSON 데이터 파싱
+                })
+                .then(data => {
+                    const tableBody = document.querySelector("table tbody");
+                    tableBody.innerHTML = "";
+
+                    data.reportList.forEach(report => {
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td>${report.postTitle}</td>
+                            <td>${report.reportCount}</td>
+                            <td><a href="/posting/read/${report.postId}" class="btn btn-info">상세보기</a></td>
+                            <td>
+                                <button class="btn ${report.status === 'HIDDEN' ? 'btn-warning' : 'btn-success'}"
+                                        onclick="confirmToggleVisibility(${report.reportId}, '${report.status}')">
+                                    ${report.status === 'HIDDEN' ? '공개 처리' : '비공개 처리'}
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error("Error fetching report data:", error);
+                    alert("데이터를 불러오는 중 오류가 발생했습니다.");
+                });
+        }
+
+        // 공개/비공개 상태 토글
+        function confirmToggleVisibility(reportId, currentStatus) {
+            const isVisible = currentStatus === 'HIDDEN';
+            const confirmation = confirm(isVisible ? "공개 처리하시겠습니까?" : "비공개 처리하시겠습니까?");
+
+            if (confirmation) {
+                fetch(`/admin/reports/${reportId}/toggle-visibility`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ visible: isVisible })
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error("비공개/공개 처리 중 서버 오류가 발생했습니다.");
+                        }
+                        alert(isVisible ? "공개 처리 완료" : "비공개 처리 완료");
+                        fetchReports(document.getElementById("reportToggleSwitch").checked ? "in-progress" : "all");
+                    })
+                    .catch(error => {
+                        console.error("Error toggling visibility:", error);
+                        alert("처리 중 오류가 발생했습니다.");
+                    });
+            }
+        }
+    </script>
+</div>
+</body>
+</html>

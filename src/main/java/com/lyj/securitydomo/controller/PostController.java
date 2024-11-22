@@ -6,6 +6,7 @@ import com.lyj.securitydomo.domain.pPhoto;
 import com.lyj.securitydomo.dto.PageRequestDTO;
 import com.lyj.securitydomo.dto.PageResponseDTO;
 import com.lyj.securitydomo.dto.PostDTO;
+import com.lyj.securitydomo.dto.PostReplyCountDTO;
 import com.lyj.securitydomo.dto.upload.UploadFileDTO;
 import com.lyj.securitydomo.dto.upload.UploadResultDTO;
 import com.lyj.securitydomo.service.PostService;
@@ -61,7 +62,11 @@ public class PostController {
         }
 
         // 게시글 목록 조회
-        PageResponseDTO<PostDTO> responseDTO = postService.list(pageRequestDTO);
+//      PageResponseDTO<PostDTO> responseDTO = postService.list(pageRequestDTO);
+
+        PageResponseDTO<PostReplyCountDTO> responseDTO = postService.listWithReplyCount(pageRequestDTO);
+        log.info(responseDTO);
+        model.addAttribute("responseDTO", responseDTO);
 
         // 사용자 역할(관리자 여부) 확인
         boolean isAdmin = principal != null && principal.getUser().getRole().equals("ADMIN");
@@ -287,4 +292,5 @@ public class PostController {
         log.info("업로드 처리 완료. 저장된 파일 수: {}", fileNames.size());
         return fileNames;
     }
+
 }

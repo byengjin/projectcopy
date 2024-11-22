@@ -58,6 +58,7 @@ public class PostDTO {
 
     private boolean firstComeFirstServe; // 선착순 여부
 
+    private Integer replyCount; // 댓글 수 (Integer로 설정)
     /**
      * 썸네일 이미지 링크를 반환합니다.
      * - 업로드된 이미지가 있으면 첫 번째 이미지 링크를 반환

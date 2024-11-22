@@ -3,6 +3,8 @@ package com.lyj.securitydomo.repository;
 
 
 import com.lyj.securitydomo.domain.Post;
+import com.lyj.securitydomo.dto.PostDTO;
+import com.lyj.securitydomo.dto.PostReplyCountDTO;
 import com.lyj.securitydomo.repository.search.PostSearch;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,4 +37,15 @@ public interface PostRepository extends JpaRepository<Post, Long>, PostSearch {
 
     @Query("select p from Post p where p.author.username=:username")
     Page<Post> findByUsername(@Param("username") String username, Pageable pageable);
+
+
+    @Query("""
+        SELECT p, COUNT(r) AS replyCount 
+        FROM Post p 
+        LEFT JOIN Reply r ON r.post = p 
+        WHERE p.author.username = :username 
+        GROUP BY p
+    """)
+    Page<Object[]> fetchPostsWithReplyCount(String username, Pageable pageable);
+
 }

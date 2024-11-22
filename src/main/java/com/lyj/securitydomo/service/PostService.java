@@ -1,13 +1,11 @@
 
 package com.lyj.securitydomo.service;
 
-import com.lyj.securitydomo.domain.Post;
 import com.lyj.securitydomo.domain.User;
 import com.lyj.securitydomo.dto.PageRequestDTO;
 import com.lyj.securitydomo.dto.PageResponseDTO;
 import com.lyj.securitydomo.dto.PostDTO;
-
-import java.util.List;
+import com.lyj.securitydomo.dto.PostReplyCountDTO;
 
 public interface PostService {
 
@@ -35,5 +33,6 @@ public interface PostService {
     //작성자가 쓴 글 리스트
     public PageResponseDTO<PostDTO> writinglist(PageRequestDTO pageRequestDTO, User user);
 
-
+    // 댓글 수 포함 게시글 목록 조회 (페이징 처리)
+    PageResponseDTO<PostReplyCountDTO> listWithReplyCount(PageRequestDTO pageRequestDTO);
 }

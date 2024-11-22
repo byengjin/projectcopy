@@ -1,6 +1,7 @@
 package com.lyj.securitydomo.repository.search;
 
 import com.lyj.securitydomo.domain.Post;
+import com.lyj.securitydomo.dto.PostReplyCountDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -16,4 +17,7 @@ public interface PostSearch {
      * @return 조건에 맞는 게시글 페이지 결과
      */
     Page<Post> searchAll(String[] types, String keyword, Pageable pageable, Boolean isVisible);
+
+    Page<PostReplyCountDTO> searchWithReplyCount(String [] types, String keyword, Pageable pageable);
+
 }

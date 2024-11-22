@@ -7,6 +7,7 @@ import com.lyj.securitydomo.domain.pPhoto;
 import com.lyj.securitydomo.dto.PageRequestDTO;
 import com.lyj.securitydomo.dto.PageResponseDTO;
 import com.lyj.securitydomo.dto.PostDTO;
+import com.lyj.securitydomo.dto.PostReplyCountDTO;
 import com.lyj.securitydomo.dto.upload.UploadResultDTO;
 import com.lyj.securitydomo.repository.PostRepository;
 import com.lyj.securitydomo.repository.ReportRepository;
@@ -28,8 +29,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static com.lyj.securitydomo.domain.QPost.post;
 
 //import static com.lyj.securitydomo.domain.QUser.user;
 
@@ -341,6 +340,9 @@ public class PostServiceImpl implements PostService {
                 .total((int) result.getTotalElements())
                 .build();
     }
+
+
+
     /**
      * 게시글 비공개 처리 메서드
      * - 게시글을 비공개(isVisible=false) 상태로 변경
@@ -383,6 +385,21 @@ public class PostServiceImpl implements PostService {
                 .orElseThrow(() -> new EntityNotFoundException("게시글을 찾을 수 없습니다. ID: " + postId));
     }
 
+    @Override
+    public PageResponseDTO<PostReplyCountDTO> listWithReplyCount(PageRequestDTO pageRequestDTO) {
+
+        String[] types = pageRequestDTO.getTypes();
+        String keyword = pageRequestDTO.getKeyword();
+        Pageable pageable = pageRequestDTO.getPageable("postId");
+
+        Page<PostReplyCountDTO> result = postRepository.searchWithReplyCount(types, keyword, pageable);
+
+        return PageResponseDTO.<PostReplyCountDTO>withAll()
+                .pageRequestDTO(pageRequestDTO)
+                .dtoList(result.getContent())
+                .total((int)result.getTotalElements())
+                .build();
+    }
 
 
 }

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/basic.html}">
+<head>
+    <meta charset="UTF-8">
+    <title>Read My Page</title>
+    <style>
+        /* 메인 컨테이너 스타일 */
+        .main-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: linear-gradient(to bottom, #ffffff, #f9f9f9);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        /* 제목 스타일 */
+        .main-container h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+        }
+
+        /* 버튼 그룹 */
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* 버튼 스타일 */
+        .btn-custom {
+            width: 40%;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            transition: all 0.3s ease-in-out;
+            text-transform: uppercase;
+        }
+
+        /* 각 버튼 색상 */
+        .btn-writing {
+            background-color: #5a9cef; /* 파란색 */
+        }
+
+        .btn-writing:hover {
+            background-color: #487dbf; /* 어두운 파란색 */
+        }
+
+        .btn-application {
+            background-color: #6f42c1; /* 보라색 */
+        }
+
+        .btn-application:hover {
+            background-color: #553093; /* 어두운 보라색 */
+        }
+
+        .btn-edit-info {
+            background-color: #00b894; /* 초록색 */
+        }
+
+        .btn-edit-info:hover {
+            background-color: #008f6d; /* 어두운 초록색 */
+        }
+
+        .btn-view-info {
+            background-color: #e17055; /* 주황색 */
+        }
+
+        .btn-view-info:hover {
+            background-color: #c7543c; /* 어두운 주황색 */
+        }
+    </style>
+</head>
+
+<div layout:fragment="content">
+    <div class="main-container">
+        <h3>My Page</h3>
+        <div class="btn-group">
+            <!-- 각 버튼 -->
+            <button type="button" class="btn btn-custom btn-writing" onclick="location.href='/user/mywriting'">
+                나의 작성글
+            </button>
+            <button type="button" class="btn btn-custom btn-application" onclick="location.href='/user/myapp'">
+                나의 신청목록
+            </button>
+            <button type="button" class="btn btn-custom btn-edit-info" onclick="location.href='/user/mypage'">
+                내 정보 수정
+            </button>
+            <button type="button" class="btn btn-custom btn-view-info" onclick="location.href='/user/info'">
+                내 정보 보기
+            </button>
+        </div>
+    </div>
+</div>
+</html>

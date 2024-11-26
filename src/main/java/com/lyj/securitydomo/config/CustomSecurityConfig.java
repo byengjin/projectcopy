@@ -57,6 +57,8 @@ public class CustomSecurityConfig {
         AuthenticationManagerBuilder auth = http.getSharedObject(AuthenticationManagerBuilder.class);
         auth.userDetailsService(userDetailsService).passwordEncoder(bCryptPasswordEncoder());
 
+
+
         return http.build(); // 최종 SecurityFilterChain 반환
     }
 
@@ -65,4 +67,5 @@ public class CustomSecurityConfig {
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
 }

@@ -301,4 +301,21 @@ public class PostController {
         log.info("업로드 처리 완료. 저장된 파일 수: {}", fileNames.size());
         return fileNames;
     }
+
+    @RestController
+    @RequiredArgsConstructor
+    public class KakaoLoginPageController {
+
+        @Value("${spring.security.oauth2.client.registration.kakao.client-id}")
+        private String kakaoClientId;
+
+        @Value("${spring.security.oauth2.client.registration.kakao.client-secret}")
+        private String kakaoClientSecret;
+
+        @Value("${spring.security.oauth2.client.registration.kakao.redirect-uri}")
+        private String kakaoRedirectUri;
+
+        // Controller 메서드 작성
+    }
+
 }
